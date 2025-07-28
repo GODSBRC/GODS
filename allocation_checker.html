@@ -135,6 +135,11 @@
         } while (cursor);
       }
 
+      if (allValid.length === 0) {
+        resultsDiv.innerHTML = '<div>No GODS inscriptions found for the given wallet(s).</div>';
+        return;
+      }
+
       const walletTotal = allValid.reduce((sum, insc) => sum + tokenData[insc.id].token, 0);
       total += walletTotal;
 
@@ -192,8 +197,9 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      fetchTokenData();
-      addWalletInput();
+      fetchTokenData().then(() => {
+        addWalletInput();
+      });
     });
   </script>
 </body>

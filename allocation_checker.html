@@ -127,7 +127,7 @@
 
         let cursor = '';
         while (true) {
-          const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions?address=${addr}&limit=200${cursor ? `&cursor=${cursor}` : ''}`);
+          const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions?address=${addr}${cursor ? `&cursor=${cursor}` : ''}`);
           const data = await res.json();
           const pageValid = data.results.filter(insc => tokenData[insc.id]);
           allValid.push(...pageValid);

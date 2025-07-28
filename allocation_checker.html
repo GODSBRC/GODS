@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GODS Allocation Checker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #eee;
+      padding: 2rem;
+    }
+    h1 {
+      color: #E7BB67;
+    }
+    .wallet-input {
+      margin-bottom: 1rem;
+    }
+    input[type="text"] {
+      padding: 0.5rem;
+      width: 80%;
+      max-width: 400px;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      background-color: #E7BB67;
+      border: none;
+      color: #111;
+      cursor: pointer;
+      margin-left: 0.5rem;
+    }
+    #results {
+      margin-top: 2rem;
+    }
+    .inscription-details {
+      display: none;
+      margin-top: 1rem;
+    }
+    .wallet-result {
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>GODS Allocation Checker</h1>
+  <div id="wallets"></div>
+  <button onclick="addWalletInput()">Add Wallet</button>
+  <button onclick="checkAllocations()">Check Allocations</button>
+  <button onclick="toggleDetails()">Toggle Extended View</button>
+
+  <div id="results"></div>
+
+  <script>
+    const MAX_WALLETS = 5;
+    let tokenData = {};
+    let walletCount = 0;
+    const walletsDiv = document.getElementById('wallets');
+    const resultsDiv = document.getElementById('results');
+
+    async function fetchTokenData() {
+      const res = await fetch('https://raw.githubusercontent.com/GODSBRC/GODS/refs/heads/main/metadata');
+      const json = await res.json();
+      for (const item of json) {
+        tokenData[item.id] = item.meta.attributes.find(attr => attr.trait_type === 'BRC-2.0Token')?.value || 0;
+      }
+    }
+
+    function addWalletInput(initial = false) {
+      if (walletCount >= MAX_WALLETS) return;
+      const div = document.createElement('div');
+      div.className = 'wallet-input';
+      div.innerHTML = `<input type="text" placeholder="Enter Bitcoin address" id="wallet-${walletCount}">`;
+      walletsDiv.appendChild(div);
+      walletCount++;
+    }
+
+    async function checkAllocations() {
+      resultsDiv.innerHTML = '';
+      let total = 0;
+
+      for (let i = 0; i < walletCount; i++) {
+        const addr = document.getElementById(`wallet-${i}`).value.trim();
+        if (!addr) continue;
+
+        const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions?address=${addr}`);
+        const data = await res.json();
+        const valid = data.results.filter(insc => tokenData[insc.id]);
+
+        const walletTotal = valid.reduce((sum, insc) => sum + parseInt(tokenData[insc.id] || 0), 0);
+        total += walletTotal;
+
+        const walletSection = document.createElement('div');
+        walletSection.className = 'wallet-result';
+        walletSection.innerHTML = `<strong>Wallet ${i + 1}</strong>: ${walletTotal} Tokens
+          <div class="inscription-details">
+            ${valid.map(insc => `<div>${insc.id}: ${tokenData[insc.id]} Tokens</div>`).join('')}
+          </div>`;
+        resultsDiv.appendChild(walletSection);
+      }
+
+      const totalDiv = document.createElement('div');
+      totalDiv.innerHTML = `<h2>Total Allocation: ${total} Tokens</h2>`;
+      resultsDiv.prepend(totalDiv);
+    }
+
+    function toggleDetails() {
+      document.querySelectorAll('.inscription-details').forEach(div => {
+        div.style.display = div.style.display === 'none' ? 'block' : 'none';
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchTokenData();
+      addWalletInput();
+    });
+  </script>
+</body>
+</html>

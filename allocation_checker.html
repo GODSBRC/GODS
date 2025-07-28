@@ -37,7 +37,12 @@
       margin-top: 1rem;
     }
     .wallet-result {
-      margin-bottom: 1rem;
+      margin-bottom: 2rem;
+    }
+    .summary {
+      margin-top: 1rem;
+      padding-left: 1rem;
+      color: #ccc;
     }
   </style>
 </head>
@@ -61,7 +66,15 @@
       const res = await fetch('https://raw.githubusercontent.com/GODSBRC/GODS/refs/heads/main/metadata');
       const json = await res.json();
       for (const item of json) {
-        tokenData[item.id] = item.meta.attributes.find(attr => attr.trait_type === 'BRC-2.0Token')?.value || 0;
+        const tierAttr = item.meta.attributes.find(attr => attr.trait_type === 'Tier');
+        const nameAttr = item.meta.attributes.find(attr => attr.trait_type === 'Name');
+        const tokenAttr = item.meta.attributes.find(attr => attr.trait_type === 'BRC-2.0Token');
+
+        tokenData[item.id] = {
+          token: tokenAttr?.value || 0,
+          tier: tierAttr?.value || 'Unknown',
+          name: nameAttr?.value || 'Unknown'
+        };
       }
     }
 
@@ -86,14 +99,37 @@
         const data = await res.json();
         const valid = data.results.filter(insc => tokenData[insc.id]);
 
-        const walletTotal = valid.reduce((sum, insc) => sum + parseInt(tokenData[insc.id] || 0), 0);
+        const walletTotal = valid.reduce((sum, insc) => sum + parseInt(tokenData[insc.id].token), 0);
         total += walletTotal;
+
+        // Summarize by Tier and Name
+        const tierCount = {};
+        const nameCount = {};
+        valid.forEach(insc => {
+          const info = tokenData[insc.id];
+          tierCount[info.tier] = (tierCount[info.tier] || 0) + 1;
+          nameCount[info.name] = (nameCount[info.name] || 0) + 1;
+        });
+
+        let tierSummary = '<div class="summary"><strong>By Tier:</strong><ul>';
+        for (const tier in tierCount) {
+          tierSummary += `<li>Tier ${tier}: ${tierCount[tier]}</li>`;
+        }
+        tierSummary += '</ul></div>';
+
+        let nameSummary = '<div class="summary"><strong>By Name:</strong><ul>';
+        for (const name in nameCount) {
+          nameSummary += `<li>${name}: ${nameCount[name]}</li>`;
+        }
+        nameSummary += '</ul></div>';
 
         const walletSection = document.createElement('div');
         walletSection.className = 'wallet-result';
         walletSection.innerHTML = `<strong>Wallet ${i + 1}</strong>: ${walletTotal} Tokens
+          ${tierSummary}
+          ${nameSummary}
           <div class="inscription-details">
-            ${valid.map(insc => `<div>${insc.id}: ${tokenData[insc.id]} Tokens</div>`).join('')}
+            ${valid.map(insc => `<div>${insc.id}: ${tokenData[insc.id].token} Tokens</div>`).join('')}
           </div>`;
         resultsDiv.appendChild(walletSection);
       }

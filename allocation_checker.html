@@ -53,6 +53,13 @@
       margin-top: 1rem;
       color: #ff9999;
     }
+    .status-box {
+      padding: 1rem;
+      margin-bottom: 1rem;
+      color: #111;
+      font-weight: bold;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -80,7 +87,7 @@
       { name: 'Octopus', tokens: 3500000, color: '#e5989b' },
       { name: 'Crab', tokens: 1800000, color: '#ffb627' },
       { name: 'Shrimp', tokens: 672000, color: '#cdb4db' },
-      { name: 'Noob', tokens: 0, color: '#111' }
+      { name: 'Noob', tokens: 0, color: '#444' }
     ];
 
     async function fetchTokenData() {
@@ -112,20 +119,27 @@
       resultsDiv.innerHTML = '';
       let total = 0;
       let allNames = new Set();
+      let allValid = [];
 
       for (let i = 0; i < walletCount; i++) {
         const addr = document.getElementById(`wallet-${i}`).value.trim();
         if (!addr) continue;
 
-        const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions?address=${addr}`);
-        const data = await res.json();
-        const valid = data.results.filter(insc => tokenData[insc.id]);
+        let cursor = '';
+        let pageValid = [];
+        do {
+          const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions?address=${addr}&limit=200&cursor=${cursor}`);
+          const data = await res.json();
+          pageValid = data.results.filter(insc => tokenData[insc.id]);
+          cursor = data.next || '';
+          allValid.push(...pageValid);
+        } while (cursor);
 
-        const walletTotal = valid.reduce((sum, insc) => sum + tokenData[insc.id].token, 0);
+        const walletTotal = allValid.reduce((sum, insc) => sum + tokenData[insc.id].token, 0);
         total += walletTotal;
 
         const tierMap = {};
-        valid.forEach(insc => {
+        allValid.forEach(insc => {
           const info = tokenData[insc.id];
           if (!tierMap[info.tier]) tierMap[info.tier] = {};
           tierMap[info.tier][info.name] = (tierMap[info.tier][info.name] || 0) + 1;
@@ -147,23 +161,20 @@
         walletSection.innerHTML = `<strong>Wallet ${i + 1}</strong>: ${walletTotal} Tokens
           ${tierSummary}
           <div class="inscription-details">
-            ${valid.map(insc => `<div>${insc.id}: ${tokenData[insc.id].token} Tokens</div>`).join('')}
+            ${allValid.map(insc => `<div>${insc.id}: ${tokenData[insc.id].token} Tokens</div>`).join('')}
           </div>`;
         resultsDiv.appendChild(walletSection);
       }
 
-      const totalDiv = document.createElement('div');
       const fullSet = [...allNames].length === 24;
       const rank = RANKS.find(r => total >= r.tokens && (!r.fullSet || fullSet)) || RANKS[RANKS.length - 1];
-      document.body.style.backgroundColor = rank.color;
-      const statusText = document.createElement('div');
-      statusText.id = 'status';
-      statusText.textContent = `You Are a ${rank.name}`;
-      resultsDiv.prepend(statusText);
 
-      const totalEl = document.createElement('div');
-      totalEl.innerHTML = `<h2>Total Allocation: ${total} Tokens</h2>`;
-      resultsDiv.prepend(totalEl);
+      const statusBox = document.createElement('div');
+      statusBox.className = 'status-box';
+      statusBox.style.backgroundColor = rank.color;
+      statusBox.innerHTML = `<div id="status">You Are a ${rank.name}</div>
+        <h2>Total Allocation: ${total} Tokens</h2>`;
+      resultsDiv.prepend(statusBox);
 
       if (!fullSet) {
         const godList = ["Fehu","Uruz","Thurisaz","Ansuz","Raidho","Kenaz","Gebo","Wunjo","Hagalaz","Nauthiz","Isa","Jera","Eihwaz","Perthro","Algiz","Sowilo","Tiwaz","Berkano","Ehwaz","Mannaz","Laguz","Ingwaz","Dagaz","Othala"];

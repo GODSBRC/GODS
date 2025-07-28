@@ -126,45 +126,44 @@
         if (!addr) continue;
 
         let cursor = '';
-        let pageValid = [];
         do {
           const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions?address=${addr}&limit=200&cursor=${cursor}`);
           const data = await res.json();
-          pageValid = data.results.filter(insc => tokenData[insc.id]);
+          const pageValid = data.results.filter(insc => tokenData[insc.id]);
           cursor = data.next || '';
           allValid.push(...pageValid);
         } while (cursor);
-
-        const walletTotal = allValid.reduce((sum, insc) => sum + tokenData[insc.id].token, 0);
-        total += walletTotal;
-
-        const tierMap = {};
-        allValid.forEach(insc => {
-          const info = tokenData[insc.id];
-          if (!tierMap[info.tier]) tierMap[info.tier] = {};
-          tierMap[info.tier][info.name] = (tierMap[info.tier][info.name] || 0) + 1;
-          allNames.add(info.name);
-        });
-
-        let tierSummary = '<div class="summary"><strong>By Tier:</strong><ul>';
-        Object.keys(tierMap).sort().forEach(tier => {
-          tierSummary += `<li>Tier ${tier}<ul>`;
-          Object.entries(tierMap[tier]).forEach(([name, count]) => {
-            tierSummary += `<li>${name}: ${count}</li>`;
-          });
-          tierSummary += `</ul></li>`;
-        });
-        tierSummary += '</ul></div>';
-
-        const walletSection = document.createElement('div');
-        walletSection.className = 'wallet-result';
-        walletSection.innerHTML = `<strong>Wallet ${i + 1}</strong>: ${walletTotal} Tokens
-          ${tierSummary}
-          <div class="inscription-details">
-            ${allValid.map(insc => `<div>${insc.id}: ${tokenData[insc.id].token} Tokens</div>`).join('')}
-          </div>`;
-        resultsDiv.appendChild(walletSection);
       }
+
+      const walletTotal = allValid.reduce((sum, insc) => sum + tokenData[insc.id].token, 0);
+      total += walletTotal;
+
+      const tierMap = {};
+      allValid.forEach(insc => {
+        const info = tokenData[insc.id];
+        if (!tierMap[info.tier]) tierMap[info.tier] = {};
+        tierMap[info.tier][info.name] = (tierMap[info.tier][info.name] || 0) + 1;
+        allNames.add(info.name);
+      });
+
+      let tierSummary = '<div class="summary"><strong>By Tier:</strong><ul>';
+      Object.keys(tierMap).sort().forEach(tier => {
+        tierSummary += `<li>Tier ${tier}<ul>`;
+        Object.entries(tierMap[tier]).forEach(([name, count]) => {
+          tierSummary += `<li>${name}: ${count}</li>`;
+        });
+        tierSummary += `</ul></li>`;
+      });
+      tierSummary += '</ul></div>';
+
+      const walletSection = document.createElement('div');
+      walletSection.className = 'wallet-result';
+      walletSection.innerHTML = `<strong>Total Wallets</strong>: ${walletCount}<br><strong>Total Tokens</strong>: ${walletTotal}
+        ${tierSummary}
+        <div class="inscription-details">
+          ${allValid.map(insc => `<div>${insc.id}: ${tokenData[insc.id].token} Tokens</div>`).join('')}
+        </div>`;
+      resultsDiv.appendChild(walletSection);
 
       const fullSet = [...allNames].length === 24;
       const rank = RANKS.find(r => total >= r.tokens && (!r.fullSet || fullSet)) || RANKS[RANKS.length - 1];

@@ -44,6 +44,15 @@
       padding-left: 1rem;
       color: #ccc;
     }
+    #status {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    #missing-gods {
+      margin-top: 1rem;
+      color: #ff9999;
+    }
   </style>
 </head>
 <body>
@@ -62,6 +71,18 @@
     const walletsDiv = document.getElementById('wallets');
     const resultsDiv = document.getElementById('results');
 
+    const RANKS = [
+      { name: 'God Whale', tokens: 33000000, fullSet: true, color: 'gold' },
+      { name: 'Whale', tokens: 33000000, fullSet: false, color: '#f7931a' },
+      { name: 'Shark', tokens: 20000000, color: '#2274a5' },
+      { name: 'Dolphin', tokens: 12000000, color: '#34a0a4' },
+      { name: 'Fish', tokens: 6000000, color: '#52b788' },
+      { name: 'Octopus', tokens: 3500000, color: '#e5989b' },
+      { name: 'Crab', tokens: 1800000, color: '#ffb627' },
+      { name: 'Shrimp', tokens: 672000, color: '#cdb4db' },
+      { name: 'Noob', tokens: 0, color: '#111' }
+    ];
+
     async function fetchTokenData() {
       const res = await fetch('https://raw.githubusercontent.com/GODSBRC/GODS/refs/heads/main/metadata');
       const json = await res.json();
@@ -71,14 +92,14 @@
         const tokenAttr = item.meta.attributes.find(attr => attr.trait_type === 'BRC-2.0Token');
 
         tokenData[item.id] = {
-          token: tokenAttr?.value || 0,
+          token: parseInt(tokenAttr?.value || 0),
           tier: tierAttr?.value || 'Unknown',
           name: nameAttr?.value || 'Unknown'
         };
       }
     }
 
-    function addWalletInput(initial = false) {
+    function addWalletInput() {
       if (walletCount >= MAX_WALLETS) return;
       const div = document.createElement('div');
       div.className = 'wallet-input';
@@ -90,6 +111,7 @@
     async function checkAllocations() {
       resultsDiv.innerHTML = '';
       let total = 0;
+      let allNames = new Set();
 
       for (let i = 0; i < walletCount; i++) {
         const addr = document.getElementById(`wallet-${i}`).value.trim();
@@ -99,35 +121,31 @@
         const data = await res.json();
         const valid = data.results.filter(insc => tokenData[insc.id]);
 
-        const walletTotal = valid.reduce((sum, insc) => sum + parseInt(tokenData[insc.id].token), 0);
+        const walletTotal = valid.reduce((sum, insc) => sum + tokenData[insc.id].token, 0);
         total += walletTotal;
 
-        // Summarize by Tier and Name
-        const tierCount = {};
-        const nameCount = {};
+        const tierMap = {};
         valid.forEach(insc => {
           const info = tokenData[insc.id];
-          tierCount[info.tier] = (tierCount[info.tier] || 0) + 1;
-          nameCount[info.name] = (nameCount[info.name] || 0) + 1;
+          if (!tierMap[info.tier]) tierMap[info.tier] = {};
+          tierMap[info.tier][info.name] = (tierMap[info.tier][info.name] || 0) + 1;
+          allNames.add(info.name);
         });
 
         let tierSummary = '<div class="summary"><strong>By Tier:</strong><ul>';
-        for (const tier in tierCount) {
-          tierSummary += `<li>Tier ${tier}: ${tierCount[tier]}</li>`;
-        }
+        Object.keys(tierMap).sort().forEach(tier => {
+          tierSummary += `<li>Tier ${tier}<ul>`;
+          Object.entries(tierMap[tier]).forEach(([name, count]) => {
+            tierSummary += `<li>${name}: ${count}</li>`;
+          });
+          tierSummary += `</ul></li>`;
+        });
         tierSummary += '</ul></div>';
-
-        let nameSummary = '<div class="summary"><strong>By Name:</strong><ul>';
-        for (const name in nameCount) {
-          nameSummary += `<li>${name}: ${nameCount[name]}</li>`;
-        }
-        nameSummary += '</ul></div>';
 
         const walletSection = document.createElement('div');
         walletSection.className = 'wallet-result';
         walletSection.innerHTML = `<strong>Wallet ${i + 1}</strong>: ${walletTotal} Tokens
           ${tierSummary}
-          ${nameSummary}
           <div class="inscription-details">
             ${valid.map(insc => `<div>${insc.id}: ${tokenData[insc.id].token} Tokens</div>`).join('')}
           </div>`;
@@ -135,8 +153,26 @@
       }
 
       const totalDiv = document.createElement('div');
-      totalDiv.innerHTML = `<h2>Total Allocation: ${total} Tokens</h2>`;
-      resultsDiv.prepend(totalDiv);
+      const fullSet = [...allNames].length === 24;
+      const rank = RANKS.find(r => total >= r.tokens && (!r.fullSet || fullSet)) || RANKS[RANKS.length - 1];
+      document.body.style.backgroundColor = rank.color;
+      const statusText = document.createElement('div');
+      statusText.id = 'status';
+      statusText.textContent = `You Are a ${rank.name}`;
+      resultsDiv.prepend(statusText);
+
+      const totalEl = document.createElement('div');
+      totalEl.innerHTML = `<h2>Total Allocation: ${total} Tokens</h2>`;
+      resultsDiv.prepend(totalEl);
+
+      if (!fullSet) {
+        const godList = ["Fehu","Uruz","Thurisaz","Ansuz","Raidho","Kenaz","Gebo","Wunjo","Hagalaz","Nauthiz","Isa","Jera","Eihwaz","Perthro","Algiz","Sowilo","Tiwaz","Berkano","Ehwaz","Mannaz","Laguz","Ingwaz","Dagaz","Othala"];
+        const missing = godList.filter(name => !allNames.has(name));
+        const missingDiv = document.createElement('div');
+        missingDiv.id = 'missing-gods';
+        missingDiv.innerHTML = `<strong>Missing Gods to God Whale Status:</strong> ${missing.join(', ')}`;
+        resultsDiv.appendChild(missingDiv);
+      }
     }
 
     function toggleDetails() {

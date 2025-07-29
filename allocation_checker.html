@@ -107,6 +107,30 @@
     li {
       margin-bottom: 0.3rem;
     }
+
+    .emoji-bounce {
+      display: inline-block;
+      animation: bounce 1.2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    .progress-container {
+      background-color: #333;
+      border-radius: 8px;
+      overflow: hidden;
+      height: 20px;
+      margin: 0.5rem 0 1rem;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background-color: #E7BB67;
+      transition: width 1s ease-in-out;
+    }
   </style>
 </head>
 <body>
@@ -207,16 +231,6 @@
         allNames.add(info.name);
       });
 
-      let tierSummary = '<div class="summary"><strong>By Tier:</strong><ul>';
-      Object.keys(tierMap).sort().forEach(tier => {
-        tierSummary += `<li>Tier ${tier}<ul>`;
-        Object.entries(tierMap[tier]).forEach(([name, count]) => {
-          tierSummary += `<li>${name}: ${count}</li>`;
-        });
-        tierSummary += `</ul></li>`;
-      });
-      tierSummary += '</ul></div>';
-
       const fullSet = [...allNames].length === 24;
       const rank = RANKS.find(r => total >= r.tokens && (!r.fullSet || fullSet)) || RANKS[RANKS.length - 1];
 
@@ -234,26 +248,77 @@
 
       const emoji = rankEmojis[rank.name] || "";
 
+      // Berechne nächsten Rang
+      let nextRank = null;
+      for (const r of RANKS) {
+        const needed = r.tokens - total;
+        const qualifies = total < r.tokens && (!r.fullSet || fullSet);
+        if (qualifies) {
+          nextRank = { ...r, missing: needed };
+          break;
+        }
+      }
+
       const statusBox = document.createElement('div');
       statusBox.className = 'status-box';
       statusBox.style.backgroundColor = rank.color;
       statusBox.innerHTML = `
-        <div id="status">You Are a ${rank.name} ${emoji}</div>
+        <div id="status">You Are a ${rank.name} <span class="emoji-bounce">${emoji}</span></div>
         <h2>Total Allocation: ${total.toLocaleString()} Tokens</h2>
       `;
       resultsDiv.prepend(statusBox);
 
+      // Fortschrittsbalken
+      if (nextRank) {
+        const nextDiv = document.createElement('div');
+        nextDiv.style.color = '#ccc';
+        nextDiv.style.marginBottom = '0.5rem';
+        nextDiv.innerHTML = `Only ${nextRank.missing.toLocaleString()} tokens missing for <strong>${nextRank.name}</strong> rank!`;
+
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'progress-container';
+        const progressBar = document.createElement('div');
+        progressBar.className = 'progress-bar';
+
+        const percent = Math.min(100, (total / nextRank.tokens) * 100);
+        progressBar.style.width = percent + '%';
+        progressContainer.appendChild(progressBar);
+
+        resultsDiv.insertBefore(nextDiv, resultsDiv.children[1]);
+        resultsDiv.insertBefore(progressContainer, resultsDiv.children[2]);
+      }
+
+      // Share on X Button
       const shareButton = document.createElement('button');
       shareButton.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" style="height: 1em; vertical-align: middle; margin-right: 0.3em;" viewBox="0 0 24 24" fill="currentColor"><path d="M20.31 3H3.69a.69.69 0 0 0-.69.69v16.62c0 .38.31.69.69.69h16.62c.38 0 .69-.31.69-.69V3.69a.69.69 0 0 0-.69-.69ZM16.96 16h-1.4l-3.14-4.26L8.68 16H7.01l3.94-5.35L7.34 8h1.4l2.98 3.87L15.07 8h1.67l-4.01 5.4L16.96 16Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" style="height: 2em; vertical-align: middle; margin-right: 0.4em;" viewBox="0 0 24 24" fill="currentColor"><path d="M20.31 3H3.69a.69.69 0 0 0-.69.69v16.62c0 .38.31.69.69.69h16.62c.38 0 .69-.31.69-.69V3.69a.69.69 0 0 0-.69-.69ZM16.96 16h-1.4l-3.14-4.26L8.68 16H7.01l3.94-5.35L7.34 8h1.4l2.98 3.87L15.07 8h1.67l-4.01 5.4L16.96 16Z"/></svg>
         Share on X
       `;
       shareButton.onclick = () => {
-        const tweetText = `I just checked my $GODS allocation and I'm a ${rank.name} ${emoji} with ${total.toLocaleString()} tokens. How much you got? #GODS #Ordinals #BRC20`;
+        const tweetText =
+`Just checked my $GODS allocation: ${total.toLocaleString()} tokens
+Status: ${rank.name} ${emoji}
+
+The only FREE. FAIR. FIRST. airdropped BRC 2.0 collection.
+OGs got in for free. The rest will chase.
+
+Join the comeback: @brc_gods21
+#BRC20 #Ordinals #GODS #Bitcoin`;
         const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
         window.open(tweetUrl, '_blank');
       };
-      resultsDiv.insertBefore(shareButton, resultsDiv.children[1]);
+      resultsDiv.insertBefore(shareButton, resultsDiv.children[3]);
+
+      // Zusammenfassung
+      let tierSummary = '<div class="summary"><strong>By Tier:</strong><ul>';
+      Object.keys(tierMap).sort().forEach(tier => {
+        tierSummary += `<li>Tier ${tier}<ul>`;
+        Object.entries(tierMap[tier]).forEach(([name, count]) => {
+          tierSummary += `<li>${name}: ${count}</li>`;
+        });
+        tierSummary += `</ul></li>`;
+      });
+      tierSummary += '</ul></div>';
 
       const walletSection = document.createElement('div');
       walletSection.className = 'wallet-result';

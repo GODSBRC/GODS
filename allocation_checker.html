@@ -250,12 +250,15 @@
 
       // Berechne nächsten Rang
       let nextRank = null;
-      for (const r of RANKS) {
-        const needed = r.tokens - total;
-        const qualifies = total < r.tokens && (!r.fullSet || fullSet);
-        if (qualifies) {
-          nextRank = { ...r, missing: needed };
-          break;
+      const currentIndex = RANKS.findIndex(r => r.name === rank.name);
+      if (currentIndex > 0) {
+        for (let i = currentIndex - 1; i >= 0; i--) {
+          const r = RANKS[i];
+          const needed = r.tokens - total;
+          if (!r.fullSet || fullSet) {
+            nextRank = { ...r, missing: needed };
+            break;
+          }
         }
       }
 

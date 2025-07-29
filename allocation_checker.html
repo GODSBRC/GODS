@@ -51,6 +51,8 @@
       margin: 0.5rem;
       font-weight: bold;
       transition: transform 0.2s ease;
+      display: inline-flex;
+      align-items: center;
     }
 
     button:hover {
@@ -90,7 +92,7 @@
 
     .status-box {
       padding: 1.2rem;
-      margin-bottom: 2rem;
+      margin-bottom: 1rem;
       color: #000;
       font-weight: bold;
       border-radius: 8px;
@@ -215,6 +217,44 @@
       });
       tierSummary += '</ul></div>';
 
+      const fullSet = [...allNames].length === 24;
+      const rank = RANKS.find(r => total >= r.tokens && (!r.fullSet || fullSet)) || RANKS[RANKS.length - 1];
+
+      const rankEmojis = {
+        "God Whale": "🐉",
+        "Whale": "🐋",
+        "Shark": "🦈",
+        "Dolphin": "🐬",
+        "Fish": "🐟",
+        "Octopus": "🐙",
+        "Crab": "🦀",
+        "Shrimp": "🦐",
+        "Noob": "🐣"
+      };
+
+      const emoji = rankEmojis[rank.name] || "";
+
+      const statusBox = document.createElement('div');
+      statusBox.className = 'status-box';
+      statusBox.style.backgroundColor = rank.color;
+      statusBox.innerHTML = `
+        <div id="status">You Are a ${rank.name} ${emoji}</div>
+        <h2>Total Allocation: ${total.toLocaleString()} Tokens</h2>
+      `;
+      resultsDiv.prepend(statusBox);
+
+      const shareButton = document.createElement('button');
+      shareButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" style="height: 1em; vertical-align: middle; margin-right: 0.3em;" viewBox="0 0 24 24" fill="currentColor"><path d="M20.31 3H3.69a.69.69 0 0 0-.69.69v16.62c0 .38.31.69.69.69h16.62c.38 0 .69-.31.69-.69V3.69a.69.69 0 0 0-.69-.69ZM16.96 16h-1.4l-3.14-4.26L8.68 16H7.01l3.94-5.35L7.34 8h1.4l2.98 3.87L15.07 8h1.67l-4.01 5.4L16.96 16Z"/></svg>
+        Share on X
+      `;
+      shareButton.onclick = () => {
+        const tweetText = `I just checked my $GODS allocation and I'm a ${rank.name} ${emoji} with ${total.toLocaleString()} tokens. How much you got? #GODS #Ordinals #BRC20`;
+        const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+        window.open(tweetUrl, '_blank');
+      };
+      resultsDiv.insertBefore(shareButton, resultsDiv.children[1]);
+
       const walletSection = document.createElement('div');
       walletSection.className = 'wallet-result';
       walletSection.innerHTML = `<strong>Total Wallets</strong>: ${walletCount}<br><strong>Total Tokens</strong>: ${walletTotal}
@@ -224,16 +264,6 @@
         </div>`;
       resultsDiv.appendChild(walletSection);
 
-      const fullSet = [...allNames].length === 24;
-      const rank = RANKS.find(r => total >= r.tokens && (!r.fullSet || fullSet)) || RANKS[RANKS.length - 1];
-
-      const statusBox = document.createElement('div');
-      statusBox.className = 'status-box';
-      statusBox.style.backgroundColor = rank.color;
-      statusBox.innerHTML = `<div id="status">You Are a ${rank.name}</div>
-        <h2>Total Allocation: ${total.toLocaleString()} Tokens</h2>`;
-      resultsDiv.prepend(statusBox);
-
       if (!fullSet) {
         const godList = ["Fehu","Uruz","Thurisaz","Ansuz","Raidho","Kenaz","Gebo","Wunjo","Hagalaz","Nauthiz","Isa","Jera","Eihwaz","Perthro","Algiz","Sowilo","Tiwaz","Berkano","Ehwaz","Mannaz","Laguz","Ingwaz","Dagaz","Othala"];
         const missing = godList.filter(name => !allNames.has(name));
@@ -242,15 +272,6 @@
         missingDiv.innerHTML = `<strong>Missing Gods to God Whale Status:</strong> ${missing.join(', ')}`;
         resultsDiv.appendChild(missingDiv);
       }
-
-      const shareButton = document.createElement('button');
-      shareButton.textContent = 'Auf X teilen';
-      shareButton.onclick = () => {
-        const tweetText = `I just checked my $GODS allocation and I'm a ${rank.name} with ${total.toLocaleString()} tokens. How much you got? #GODS #Ordinals #BRC20`;
-        const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
-        window.open(tweetUrl, '_blank');
-      };
-      resultsDiv.appendChild(shareButton);
     }
 
     function toggleDetails() {

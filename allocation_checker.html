@@ -231,7 +231,7 @@
       statusBox.className = 'status-box';
       statusBox.style.backgroundColor = rank.color;
       statusBox.innerHTML = `<div id="status">You Are a ${rank.name}</div>
-        <h2>Total Allocation: ${total} Tokens</h2>`;
+        <h2>Total Allocation: ${total.toLocaleString()} Tokens</h2>`;
       resultsDiv.prepend(statusBox);
 
       if (!fullSet) {
@@ -242,6 +242,15 @@
         missingDiv.innerHTML = `<strong>Missing Gods to God Whale Status:</strong> ${missing.join(', ')}`;
         resultsDiv.appendChild(missingDiv);
       }
+
+      const shareButton = document.createElement('button');
+      shareButton.textContent = 'Auf X teilen';
+      shareButton.onclick = () => {
+        const tweetText = `I just checked my $GODS allocation and I'm a ${rank.name} with ${total.toLocaleString()} tokens. How much you got? #GODS #Ordinals #BRC20`;
+        const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+        window.open(tweetUrl, '_blank');
+      };
+      resultsDiv.appendChild(shareButton);
     }
 
     function toggleDetails() {

@@ -14,4 +14,4 @@ This tool lets you enter up to 5 Bitcoin addresses to:
 
 You can also toggle an extended view to inspect each inscription in detail.
 
-👉 [Open Live Version]
+👉 [Open Live Version] https://godsbrc.github.io/GODS/allocation_checker.html
